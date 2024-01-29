@@ -16,5 +16,41 @@ export const makeCommands = (client: Client<boolean>, server: Server) => {
         );
       }
     });
+
+    socket.on("reportLog", async (data: any) => {
+      logger.info("reportLog");
+      const channel = client.channels.cache.get("1201654662579621999");
+      if (channel && channel.type == ChannelType.GuildText) {
+        channel.send(data);
+      } else {
+        console.error(
+          "Canal inválido ou não suportado para mensagens diretas."
+        );
+      }
+    });
+
+    socket.on("adminLog", async (data: any) => {
+      logger.info("adminLog");
+      const channel = client.channels.cache.get("1201657417226780702");
+      if (channel && channel.type == ChannelType.GuildText) {
+        channel.send(data);
+      } else {
+        console.error(
+          "Canal inválido ou não suportado para mensagens diretas."
+        );
+      }
+    });
+
+    socket.on("banLog", async (data: any) => {
+      logger.info("banLog");
+      const channel = client.channels.cache.get("1201658092836892803");
+      if (channel && channel.type == ChannelType.GuildText) {
+        channel.send(data);
+      } else {
+        console.error(
+          "Canal inválido ou não suportado para mensagens diretas."
+        );
+      }
+    });
   });
 };
