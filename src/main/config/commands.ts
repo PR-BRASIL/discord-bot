@@ -6,7 +6,7 @@ export const makeCommands = (client: Client<boolean>, server: Server) => {
   const sendMessage = (channelId: string, data: any) => {
     try {
       const channel = client.channels.cache.get(channelId);
-      if (channel && channel.type == ChannelType.GuildText) {
+      if (channel && channel.type == ChannelType.GuildText && data != "") {
         channel.send(data);
         return;
       }
