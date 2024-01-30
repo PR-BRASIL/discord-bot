@@ -1,21 +1,16 @@
-import express from "express";
-import { Server } from "socket.io";
 import { makeCommands } from "./commands";
-import http from "http";
-import { rateLimitMiddleware } from "../middlewares/rate-limit";
 import { Client, GatewayIntentBits } from "discord.js";
+import { env } from "./env";
+import { io } from "socket.io-client";
 
-const app = express();
 const client = new Client({
   intents: Object.keys(GatewayIntentBits).map((a) => {
     return GatewayIntentBits[a];
   }),
 });
 
-app.use(rateLimitMiddleware);
-const server = http.createServer(app);
+export const clientSocket = io(env.apiUrl);
 
-const io = new Server(server);
-makeCommands(client, io);
+makeCommands(client);
 
-export { server, client };
+export { client };

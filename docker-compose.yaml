@@ -10,12 +10,13 @@ services:
     container_name: discord-pr-bot
     command: yarn dev
     ports:
-      - "8080:8080"
+      - "7070:7070"
     volumes:
       - ./:/app/
     networks:
-      - discord-pr-bot_network
+      - pr-server_network
 
 networks:
-  discord-pr-bot_network:
-    driver: bridge
+  pr-server_network:
+    name: pr-server-network
+    external: true
