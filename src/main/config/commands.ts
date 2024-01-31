@@ -9,7 +9,8 @@ export const makeCommands = (client: Client<boolean>) => {
     try {
       const channel = client.channels.cache.get(channelId);
       if (channel && channel.type == ChannelType.GuildText && data != "") {
-        channel.send(data);
+        const dataFormatter = "```" + data + "```";
+        channel.send(dataFormatter);
         return;
       }
 
