@@ -1,7 +1,5 @@
 import { ChannelType, Client } from "discord.js";
 import { logger } from "../../utils/logger";
-import { io } from "socket.io-client";
-import { env } from "./env";
 import { clientSocket } from "./app";
 
 export const makeCommands = (client: Client<boolean>) => {
@@ -33,6 +31,11 @@ export const makeCommands = (client: Client<boolean>) => {
   clientSocket.on("teamKill", async (data: any) => {
     logger.debug("Event executed: teamKill", data);
     sendMessage("1202063119778861127", data);
+  });
+
+  clientSocket.on("connectionLog", async (data: any) => {
+    logger.debug("Event executed: teamKill", data);
+    sendMessage("1202078127002755102", data);
   });
 
   const sendMessage = (channelId: string, data: any) => {
