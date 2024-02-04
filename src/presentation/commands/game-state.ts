@@ -1,6 +1,6 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import { client } from "../../main/config/app";
-import { TextChannel, AttachmentBuilder } from "discord.js";
+import { TextChannel, AttachmentBuilder, ChannelType } from "discord.js";
 import { logger } from "../../utils/logger";
 
 let mapName: string;
@@ -18,9 +18,27 @@ interface Player {
 
 export class GameStateCommand {
   public async handle(data: any): Promise<void> {
-    const newMapName = data.properties.mapname;
     logger.debug("Game state updated");
-    const channel = client.channels.cache.get("1203736140692197426");
+    const channel = client.channels.cache.get(
+      "1203736140692197426"
+    ) as TextChannel;
+
+    try {
+      const message = await (channel as TextChannel).messages.fetch(messageId);
+      logger.debug(message);
+      await this.createNewMessage(data, channel);
+
+      await message.edit({
+        embeds: [this.getEmbed(data)],
+      });
+    } catch (err) {
+      mapName = "";
+      await this.createNewMessage(data, channel);
+    }
+  }
+
+  private async createNewMessage(data: any, channel: TextChannel) {
+    const newMapName = data.properties.mapname;
 
     if (mapName !== newMapName) {
       mapName = newMapName;
@@ -30,10 +48,6 @@ export class GameStateCommand {
       messageId = id;
       return;
     }
-
-    (await (channel as TextChannel).messages.fetch(messageId)).edit({
-      embeds: [this.getEmbed(data)],
-    });
   }
 
   private getEmbed(data: any): EmbedBuilder {
