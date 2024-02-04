@@ -1,6 +1,7 @@
 import { ChannelType, Client } from "discord.js";
 import { logger } from "../../utils/logger";
 import { clientSocket } from "./app";
+import { GameStateCommand } from "../../presentation/commands/game-state";
 
 export const makeCommands = (client: Client<boolean>) => {
   clientSocket.on("chat", async (data: any) => {
@@ -55,4 +56,9 @@ export const makeCommands = (client: Client<boolean>) => {
       logger.error(err);
     }
   };
+
+  clientSocket.on(
+    "gameState",
+    async (data: any) => await new GameStateCommand().handle(data)
+  );
 };
