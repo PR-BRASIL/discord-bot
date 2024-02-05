@@ -57,8 +57,8 @@ export const makeCommands = (client: Client<boolean>) => {
     }
   };
 
-  clientSocket.on(
-    "gameState",
-    async (data: any) => await new GameStateCommand().handle(data)
-  );
+  clientSocket.on("gameState", async (data: any) => {
+    if (!data) return;
+    await new GameStateCommand().handle(data);
+  });
 };
