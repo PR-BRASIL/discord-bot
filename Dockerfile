@@ -6,6 +6,7 @@ COPY package.json ./
 COPY yarn.lock ./
 
 RUN yarn install
+RUN yarn add sharp --ignore-engines
 
 COPY . .
 
