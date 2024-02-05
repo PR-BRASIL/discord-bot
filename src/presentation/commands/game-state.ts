@@ -25,19 +25,24 @@ export class GameStateCommand {
 
     try {
       const message = await (channel as TextChannel).messages.fetch(messageId);
-      logger.debug(message);
-      await this.createNewMessage(data, channel);
+      const isNewMessage = await this.createNewMessage(data, channel);
+      if (isNewMessage) return;
 
       await message.edit({
         embeds: [this.getEmbed(data)],
       });
+      logger.debug("Game state edited");
     } catch (err) {
       mapName = "";
+      logger.debug("Game state created (err)");
       await this.createNewMessage(data, channel);
     }
   }
 
-  private async createNewMessage(data: any, channel: TextChannel) {
+  private async createNewMessage(
+    data: any,
+    channel: TextChannel
+  ): Promise<boolean> {
     const newMapName = data.properties.mapname;
 
     if (mapName !== newMapName) {
@@ -46,8 +51,10 @@ export class GameStateCommand {
         embeds: [this.getEmbed(data)],
       });
       messageId = id;
-      return;
+      return true;
     }
+
+    return false;
   }
 
   private getEmbed(data: any): EmbedBuilder {
