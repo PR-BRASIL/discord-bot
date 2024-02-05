@@ -1,7 +1,9 @@
 import { EmbedBuilder } from "@discordjs/builders";
 import { client } from "../../main/config/app";
-import { TextChannel, AttachmentBuilder, ChannelType } from "discord.js";
+import { TextChannel, AttachmentBuilder } from "discord.js";
 import { logger } from "../../utils/logger";
+import sharp from "sharp";
+import axios from "axios";
 
 let mapName: string;
 let messageId: string;
@@ -29,10 +31,11 @@ export class GameStateCommand {
       if (isNewMessage) return;
 
       await message.edit({
-        embeds: [this.getEmbed(data)],
+        embeds: [await this.getEmbed(data)],
       });
       logger.debug("Game state edited");
     } catch (err) {
+      logger.error(err);
       mapName = "";
       logger.debug("Game state created (err)");
       await this.createNewMessage(data, channel);
@@ -44,12 +47,16 @@ export class GameStateCommand {
     channel: TextChannel
   ): Promise<boolean> {
     const newMapName = data.properties.mapname;
+    const imagePath = "./output.webp";
+    const attachment = new AttachmentBuilder(imagePath);
 
     if (mapName !== newMapName) {
       mapName = newMapName;
       const { id } = await (channel as TextChannel).send({
-        embeds: [this.getEmbed(data)],
+        embeds: [await this.getEmbed(data)],
+        files: [attachment],
       });
+
       messageId = id;
       return true;
     }
@@ -57,7 +64,8 @@ export class GameStateCommand {
     return false;
   }
 
-  private getEmbed(data: any): EmbedBuilder {
+  private async getEmbed(data: any): Promise<EmbedBuilder> {
+    await this.convertWebp(data);
     const embed = new EmbedBuilder()
       .setColor(0x000)
       .setAuthor({
@@ -86,11 +94,13 @@ export class GameStateCommand {
       .setThumbnail(
         "https://media.discordapp.net/attachments/1202077225088974909/1203804331258814495/logo_Black.png"
       )
+      // .setImage("attachment://output.webp")
       .setFooter({
         text: "Atualizado",
         iconURL:
           "https://media.discordapp.net/attachments/1202077225088974909/1203804331258814495/logo_Black.png",
       })
+      .setImage("attachment://output.webp")
       .setTimestamp();
 
     return embed;
@@ -124,5 +134,18 @@ Deaths: ${this.getAllTeamData(data, teamNumber, "deaths")}` +
       gpm_skirmish: "Skirmish",
     };
     return allTypes[data.properties.gametype];
+  }
+
+  private async convertWebp(data: any) {
+    const mapSize = data.properties.bf2_mapsize;
+    const mapNameLink = data.properties.mapname
+      .toLowerCase()
+      .replace(/\s/g, "");
+    const response = await axios.get(
+      `https://www.realitymod.com/mapgallery/images/maps/${mapNameLink}/mapoverview_${data.properties.gametype}_${mapSize}.jpg`,
+      { responseType: "arraybuffer" }
+    );
+
+    await sharp(Buffer.from(response.data)).webp().toFile("./output.webp");
   }
 }
