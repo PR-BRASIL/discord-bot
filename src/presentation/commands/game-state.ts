@@ -65,13 +65,14 @@ export class GameStateCommand {
   }
 
   private async getEmbed(data: any): Promise<EmbedBuilder> {
+    const logoUrl =
+      "https://media.discordapp.net/attachments/1202077225088974909/1204267446928674846/logo_White.png?ex=65d41c75&is=65c1a775&hm=5494255392f14778735075646f02d71a279f100037be727af42ece7badc34cd3&=&format=webp&quality=lossless&width=639&height=639";
     await this.convertWebp(data);
     const embed = new EmbedBuilder()
       .setColor(0x000)
       .setAuthor({
         name: `Brasil Evolution | Mapa Atual`,
-        iconURL:
-          "https://media.discordapp.net/attachments/1202077225088974909/1203804331258814495/logo_Black.png",
+        iconURL: logoUrl,
       })
       .setTitle(`:map: ${data.properties.mapname} | ${this.getGameType(data)}`)
       .addFields(
@@ -91,14 +92,11 @@ export class GameStateCommand {
           inline: true,
         }
       )
-      .setThumbnail(
-        "https://media.discordapp.net/attachments/1202077225088974909/1203804331258814495/logo_Black.png"
-      )
+      .setThumbnail(logoUrl)
       // .setImage("attachment://output.webp")
       .setFooter({
         text: "Atualizado",
-        iconURL:
-          "https://media.discordapp.net/attachments/1202077225088974909/1203804331258814495/logo_Black.png",
+        iconURL: logoUrl,
       })
       .setImage("attachment://output.webp")
       .setTimestamp();
