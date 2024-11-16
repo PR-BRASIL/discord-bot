@@ -22,7 +22,7 @@ export class GameStateCommand {
   public async handle(data: any): Promise<void> {
     logger.debug("Game state updated");
     const channel = client.channels.cache.get(
-      "1203736140692197426"
+      "1151917458735767643"
     ) as TextChannel;
 
     try {
@@ -68,34 +68,44 @@ export class GameStateCommand {
     const logoUrl =
       "https://media.discordapp.net/attachments/1202077225088974909/1204267446928674846/logo_White.png?ex=65d41c75&is=65c1a775&hm=5494255392f14778735075646f02d71a279f100037be727af42ece7badc34cd3&=&format=webp&quality=lossless&width=639&height=639";
     await this.convertWebp(data);
+
     const embed = new EmbedBuilder()
-      .setColor(0x000)
+      .setColor(0x1e90ff) // Cor azul vibrante para maior destaque
       .setAuthor({
-        name: `Brasil Evolution | Mapa Atual`,
+        name: `Reality Brasil`,
         iconURL: logoUrl,
       })
       .setTitle(`:map: ${data.properties.mapname} | ${this.getGameType(data)}`)
       .addFields(
         {
-          name: data.properties.bf2_team1 + " X " + data.properties.bf2_team2,
-          value: `:people_hugging: ${data.properties.numplayers}/${data.properties.maxplayers}`,
+          name: ":trophy: Partida",
+          value: `${data.properties.bf2_team1} X ${data.properties.bf2_team2}`,
           inline: false,
         },
         {
-          name: ":red_square: " + data.properties.bf2_team1,
-          value: this.generateTeamFields(data, 1),
+          name: ":people_hugging: Jogadores",
+          value: `Atualmente: **${data.properties.numplayers}** / Máximo: **${data.properties.maxplayers}**`,
           inline: true,
         },
         {
-          name: ":blue_square: " + data.properties.bf2_team2,
-          value: this.generateTeamFields(data, 2),
+          name: ":stopwatch: Tipo de Jogo",
+          value: `${this.getGameType(data)}`,
+          inline: false,
+        },
+        {
+          name: `:red_circle: ${data.properties.bf2_team1} - Detalhes`,
+          value: this.generateDetailedTeamFields(data, 1),
+          inline: true,
+        },
+        {
+          name: `:blue_circle: ${data.properties.bf2_team2} - Detalhes`,
+          value: this.generateDetailedTeamFields(data, 2),
           inline: true,
         }
       )
       .setThumbnail(logoUrl)
-      // .setImage("attachment://output.webp")
       .setFooter({
-        text: "Atualizado",
+        text: "Atualizado em",
         iconURL: logoUrl,
       })
       .setImage("attachment://output.webp")
@@ -104,14 +114,15 @@ export class GameStateCommand {
     return embed;
   }
 
-  private generateTeamFields(data: any, teamNumber: number) {
+  private generateDetailedTeamFields(data: any, teamNumber: number) {
+    const score = this.getAllTeamData(data, teamNumber, "score");
+    const kills = this.getAllTeamData(data, teamNumber, "kills");
+    const deaths = this.getAllTeamData(data, teamNumber, "deaths");
+
     return (
-      "```" +
-      `
-Score: ${this.getAllTeamData(data, teamNumber, "score")}
-Kills: ${this.getAllTeamData(data, teamNumber, "kills")}
-Deaths: ${this.getAllTeamData(data, teamNumber, "deaths")}` +
-      "```"
+      `**Pontos:** ${score}\n` +
+      `**Kills:** ${kills}\n` +
+      `**Deaths:** ${deaths}\n`
     );
   }
 
