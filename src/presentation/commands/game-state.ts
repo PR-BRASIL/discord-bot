@@ -66,7 +66,7 @@ export class GameStateCommand {
 
   private async getEmbed(data: any): Promise<EmbedBuilder> {
     const logoUrl =
-      "https://media.discordapp.net/attachments/1202077225088974909/1204267446928674846/logo_White.png?ex=65d41c75&is=65c1a775&hm=5494255392f14778735075646f02d71a279f100037be727af42ece7badc34cd3&=&format=webp&quality=lossless&width=639&height=639";
+      "https://media.discordapp.net/attachments/1162222580644708372/1274439118591361104/Copia_de_Logo_Perfil_B.jpg?ex=6739912b&is=67383fab&hm=41dd71b5a12bb394bbc59b7d86564afb3de14f1c5017ce70dc6d32f1e804063d&=&format=webp&width=702&height=702";
     await this.convertWebp(data);
 
     const embed = new EmbedBuilder()
