@@ -7,6 +7,7 @@ import axios from "axios";
 
 let mapName: string;
 let messageId: string;
+let startTime: Date;
 
 interface Player {
   name: string;
@@ -38,6 +39,7 @@ export class GameStateCommand {
       logger.error(err);
       mapName = "";
       logger.debug("Game state created (err)");
+      startTime = new Date();
       await this.createNewMessage(data, channel);
     }
   }
@@ -91,6 +93,11 @@ export class GameStateCommand {
           name: ":stopwatch: Tipo de Jogo",
           value: `${this.getGameType(data)}`,
           inline: false,
+        },
+        {
+          name: `:stopwatch: Tempo de partida`,
+          value: getGameTime(startTime),
+          inline: true,
         },
         {
           name: `:red_circle: ${data.properties.bf2_team1} - Detalhes`,
@@ -158,3 +165,13 @@ export class GameStateCommand {
     await sharp(Buffer.from(response.data)).webp().toFile("./output.webp");
   }
 }
+
+const getGameTime = (startTime: Date) => {
+  const currentTime = new Date();
+  const timeDifference = currentTime.getTime() - startTime.getTime();
+  const seconds = Math.floor(timeDifference / 1000) % 60;
+  const minutes = Math.floor(timeDifference / (1000 * 60)) % 60;
+  const hours = Math.floor(timeDifference / (1000 * 60 * 60));
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
