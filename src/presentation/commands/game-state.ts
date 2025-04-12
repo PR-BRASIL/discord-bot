@@ -97,7 +97,7 @@ export class GameStateCommand {
         {
           name: `:stopwatch: Tempo de partida`,
           value: getGameTime(startTime),
-          inline: true,
+          inline: false,
         },
         {
           name: `:red_circle: ${data.properties.bf2_team1} - Detalhes`,
