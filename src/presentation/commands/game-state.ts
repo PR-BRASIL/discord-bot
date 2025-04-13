@@ -39,7 +39,6 @@ export class GameStateCommand {
       logger.error(err);
       mapName = "";
       logger.debug("Game state created (err)");
-      startTime = new Date();
       await this.createNewMessage(data, channel);
     }
   }
@@ -53,6 +52,7 @@ export class GameStateCommand {
     const attachment = new AttachmentBuilder(imagePath);
 
     if (mapName !== newMapName) {
+      startTime = new Date();
       mapName = newMapName;
       const { id } = await (channel as TextChannel).send({
         embeds: [await this.getEmbed(data)],
