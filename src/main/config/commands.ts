@@ -164,7 +164,7 @@ export const makeCommands = async (client: Client<boolean>) => {
             inline: true,
           },
           {
-            name: "🆔 GUID",
+            name: "🆔 Hash",
             value: `\`${guid}\``,
             inline: true,
           },
