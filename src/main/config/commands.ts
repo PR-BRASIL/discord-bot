@@ -307,10 +307,13 @@ export const makeCommands = async (client: Client<boolean>) => {
         }
       }
 
+      const logoUrl =
+        "https://media.discordapp.net/attachments/1162222580644708372/1274439118591361104/Copia_de_Logo_Perfil_B.jpg?ex=6739912b&is=67383fab&hm=41dd71b5a12bb394bbc59b7d86564afb3de14f1c5017ce70dc6d32f1e804063d&=&format=webp&width=702&height=702";
       // Criar embed para a DM
       const dmEmbed = new EmbedBuilder()
         .setColor(0xff0000) // Vermelho para ban
         .setTitle("🔨 Você foi banido")
+        .setThumbnail(logoUrl)
         .setDescription(
           "Você recebeu um ban no servidor. Veja os detalhes abaixo:"
         )
