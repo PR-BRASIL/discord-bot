@@ -91,12 +91,13 @@ export const makeCommands = async (client: Client<boolean>) => {
   const parseBanLogToEmbed = (banLogString: string): EmbedBuilder | null => {
     try {
       // Formato: [2025-11-18 16:56] 34feb10c8f184946976abd714899b6bd SPTS williancc1557 45.4.59.117 Troll ou perda proposital de asset. REGRAS: realitybrasil.org banned by PRISM user Assistente (172800)
+      // Ou: [2025-11-18 19:06] 34feb10c8f184946976abd714899b6bd SPTS williancc1557 45.4.59.117 teste banned by PRISM user Assistente (round)
 
       const dateTimeMatch = banLogString.match(
         /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/
       );
       const guidMatch = banLogString.match(/\] ([a-f0-9]{32})/);
-      const bannedByMatch = banLogString.match(/banned by (.+?) \((\d+)\)$/);
+      const bannedByMatch = banLogString.match(/banned by (.+?) \((.+?)\)$/);
 
       if (!dateTimeMatch || !guidMatch || !bannedByMatch) {
         return null;
@@ -105,7 +106,7 @@ export const makeCommands = async (client: Client<boolean>) => {
       const dateTime = dateTimeMatch[1];
       const guid = guidMatch[1];
       const bannedBy = bannedByMatch[1].trim();
-      const durationSeconds = parseInt(bannedByMatch[2]);
+      const durationValue = bannedByMatch[2].trim();
 
       // Extrair o resto da string após o GUID até "banned by"
       const afterGuid = banLogString.substring(
@@ -151,8 +152,8 @@ export const makeCommands = async (client: Client<boolean>) => {
         }
       }
 
-      // Converter duração de segundos para formato legível
-      const durationFormatted = formatDuration(durationSeconds);
+      // Converter duração para formato legível
+      const durationFormatted = formatDuration(durationValue);
 
       const embed = new EmbedBuilder()
         .setColor(0xff0000) // Vermelho para ban
@@ -168,11 +169,6 @@ export const makeCommands = async (client: Client<boolean>) => {
           {
             name: "🆔 Hash",
             value: `\`${guid}\``,
-            inline: true,
-          },
-          {
-            name: "🌐 IP",
-            value: ip ? `\`${ip}\`` : "Não especificado",
             inline: true,
           },
           {
@@ -205,7 +201,22 @@ export const makeCommands = async (client: Client<boolean>) => {
     }
   };
 
-  const formatDuration = (seconds: number): string => {
+  const formatDuration = (durationValue: string | number): string => {
+    // Se for "round", retornar "1 Round"
+    if (
+      typeof durationValue === "string" &&
+      durationValue.toLowerCase() === "round"
+    ) {
+      return "1 Round";
+    }
+
+    // Converter para número se for string
+    const seconds =
+      typeof durationValue === "string"
+        ? parseInt(durationValue)
+        : durationValue;
+
+    if (isNaN(seconds)) return "Não especificado";
     if (seconds === 0) return "Permanente";
 
     const days = Math.floor(seconds / 86400);
@@ -238,6 +249,8 @@ export const makeCommands = async (client: Client<boolean>) => {
 
       const discordId = response.data?.discordId;
 
+      console.log(response.data);
+
       if (!discordId) {
         logger.debug(`DiscordId não encontrado para o GUID: ${guid}`);
         return;
@@ -250,7 +263,7 @@ export const makeCommands = async (client: Client<boolean>) => {
       const dateTimeMatch = banLogString.match(
         /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/
       );
-      const bannedByMatch = banLogString.match(/banned by (.+?) \((\d+)\)$/);
+      const bannedByMatch = banLogString.match(/banned by (.+?) \((.+?)\)$/);
 
       if (!dateTimeMatch || !bannedByMatch) {
         return;
@@ -258,8 +271,8 @@ export const makeCommands = async (client: Client<boolean>) => {
 
       const dateTime = dateTimeMatch[1];
       const bannedBy = bannedByMatch[1].trim();
-      const durationSeconds = parseInt(bannedByMatch[2]);
-      const durationFormatted = formatDuration(durationSeconds);
+      const durationValue = bannedByMatch[2].trim();
+      const durationFormatted = formatDuration(durationValue);
 
       // Extrair motivo
       const afterGuid = banLogString.substring(
