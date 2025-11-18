@@ -64,7 +64,7 @@ export const makeCommands = async (client: Client<boolean>) => {
     }
   };
 
-  const sendBanLogMessage = (channelId: string, data: any) => {
+  const sendBanLogMessage = async (channelId: string, data: any) => {
     try {
       const channel = client.channels.cache.get(channelId);
 
@@ -75,7 +75,7 @@ export const makeCommands = async (client: Client<boolean>) => {
         return;
       }
 
-      const embed = parseBanLogToEmbed(data);
+      const embed = await parseBanLogToEmbed(data);
       if (embed) {
         channel.send({ embeds: [embed] });
       } else {
@@ -88,7 +88,9 @@ export const makeCommands = async (client: Client<boolean>) => {
     }
   };
 
-  const parseBanLogToEmbed = (banLogString: string): EmbedBuilder | null => {
+  const parseBanLogToEmbed = async (
+    banLogString: string
+  ): Promise<EmbedBuilder | null> => {
     try {
       // Formato: [2025-11-18 16:56] 34feb10c8f184946976abd714899b6bd SPTS williancc1557 45.4.59.117 Troll ou perda proposital de asset. REGRAS: realitybrasil.org banned by PRISM user Assistente (172800)
       // Ou: [2025-11-18 19:06] 34feb10c8f184946976abd714899b6bd SPTS williancc1557 45.4.59.117 teste banned by PRISM user Assistente (round)
@@ -155,6 +157,22 @@ export const makeCommands = async (client: Client<boolean>) => {
       // Converter duração para formato legível
       const durationFormatted = formatDuration(durationValue);
 
+      // Buscar discordId na API
+      let playerMention = "";
+      try {
+        const response = await axios.get(
+          `http://localhost:5050/api/user/${guid}`
+        );
+        const discordId = response.data?.discordId;
+
+        if (discordId) {
+          playerMention = ` <@${discordId}>`;
+        }
+      } catch (err) {
+        // Ignorar erro se não encontrar na API
+        logger.debug(`DiscordId não encontrado para o GUID: ${guid}`);
+      }
+
       const logoUrl =
         "https://media.discordapp.net/attachments/1162222580644708372/1274439118591361104/Copia_de_Logo_Perfil_B.jpg?ex=6739912b&is=67383fab&hm=41dd71b5a12bb394bbc59b7d86564afb3de14f1c5017ce70dc6d32f1e804063d&=&format=webp&width=702&height=702";
 
@@ -165,9 +183,11 @@ export const makeCommands = async (client: Client<boolean>) => {
         .addFields(
           {
             name: "👤 Jogador",
-            value: playerName
-              ? `**${playerName}**${clan ? ` (${clan})` : ""}`
-              : "Não especificado",
+            value: `${
+              playerName
+                ? `**${playerName}**${clan ? ` (${clan})` : ""}`
+                : "Não especificado"
+            }${playerMention}`,
             inline: true,
           },
           {
