@@ -1,4 +1,4 @@
-import { ChannelType, Client } from "discord.js";
+import { ChannelType, Client, EmbedBuilder } from "discord.js";
 import { logger } from "../../utils/logger";
 import { clientSocket } from "./app";
 import { GameStateCommand } from "../../presentation/commands/game-state";
@@ -24,7 +24,7 @@ export const makeCommands = async (client: Client<boolean>) => {
 
   clientSocket.on("banLog", async (data: any) => {
     logger.debug("Event executed: banLog", data);
-    sendMessage(env.banLogChannelId!, data);
+    sendBanLogMessage(env.banLogChannelId!, data);
   });
 
   clientSocket.on("kill", async (data: any) => {
@@ -60,6 +60,162 @@ export const makeCommands = async (client: Client<boolean>) => {
     } catch (err) {
       logger.error(err);
     }
+  };
+
+  const sendBanLogMessage = (channelId: string, data: any) => {
+    try {
+      const channel = client.channels.cache.get(channelId);
+
+      if (!channel || channel.type != ChannelType.GuildText || data == "") {
+        console.error(
+          "Canal inválido ou não suportado para mensagens diretas."
+        );
+        return;
+      }
+
+      const embed = parseBanLogToEmbed(data);
+      if (embed) {
+        channel.send({ embeds: [embed] });
+      } else {
+        // Fallback para formato antigo se não conseguir parsear
+        const dataFormatter = "```" + data + "```";
+        channel.send(dataFormatter);
+      }
+    } catch (err) {
+      logger.error(err);
+    }
+  };
+
+  const parseBanLogToEmbed = (banLogString: string): EmbedBuilder | null => {
+    try {
+      // Formato: [2025-11-18 16:56] 34feb10c8f184946976abd714899b6bd SPTS williancc1557 45.4.59.117 Troll ou perda proposital de asset. REGRAS: realitybrasil.org banned by PRISM user Assistente (172800)
+
+      const dateTimeMatch = banLogString.match(
+        /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/
+      );
+      const guidMatch = banLogString.match(/\] ([a-f0-9]{32})/);
+      const bannedByMatch = banLogString.match(/banned by (.+?) \((\d+)\)$/);
+
+      if (!dateTimeMatch || !guidMatch || !bannedByMatch) {
+        return null;
+      }
+
+      const dateTime = dateTimeMatch[1];
+      const guid = guidMatch[1];
+      const bannedBy = bannedByMatch[1].trim();
+      const durationSeconds = parseInt(bannedByMatch[2]);
+
+      // Extrair o resto da string após o GUID até "banned by"
+      const afterGuid = banLogString.substring(
+        banLogString.indexOf(guid) + guid.length + 1
+      );
+      const beforeBannedBy = afterGuid
+        .substring(0, afterGuid.indexOf("banned by"))
+        .trim();
+
+      // Parsear: SPTS williancc1557 45.4.59.117 Troll ou perda proposital de asset. REGRAS: realitybrasil.org
+      // Regex para capturar IP (formato xxx.xxx.xxx.xxx)
+      const ipMatch = beforeBannedBy.match(
+        /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/
+      );
+
+      let clan = "";
+      let playerName = "";
+      let ip = "";
+      let reason = "";
+
+      if (ipMatch) {
+        ip = ipMatch[1];
+        const ipIndex = beforeBannedBy.indexOf(ip);
+        const beforeIp = beforeBannedBy.substring(0, ipIndex).trim();
+        reason = beforeBannedBy.substring(ipIndex + ip.length).trim();
+
+        // Parsear clan e nome do jogador (antes do IP)
+        const nameParts = beforeIp.split(/\s+/);
+        if (nameParts.length >= 2) {
+          clan = nameParts[0];
+          playerName = nameParts.slice(1).join(" ");
+        } else if (nameParts.length === 1) {
+          playerName = nameParts[0];
+        }
+      } else {
+        // Fallback se não encontrar IP
+        const parts = beforeBannedBy.split(/\s+/);
+        if (parts.length >= 3) {
+          clan = parts[0];
+          playerName = parts[1];
+          ip = parts[2];
+          reason = parts.slice(3).join(" ");
+        }
+      }
+
+      // Converter duração de segundos para formato legível
+      const durationFormatted = formatDuration(durationSeconds);
+
+      const embed = new EmbedBuilder()
+        .setColor(0xff0000) // Vermelho para ban
+        .setTitle("🔨 Usuário Banido")
+        .addFields(
+          {
+            name: "👤 Jogador",
+            value: playerName
+              ? `**${playerName}**${clan ? ` (${clan})` : ""}`
+              : "Não especificado",
+            inline: true,
+          },
+          {
+            name: "🆔 GUID",
+            value: `\`${guid}\``,
+            inline: true,
+          },
+          {
+            name: "🌐 IP",
+            value: ip ? `\`${ip}\`` : "Não especificado",
+            inline: true,
+          },
+          {
+            name: "📋 Motivo",
+            value: reason || "Não especificado",
+            inline: false,
+          },
+          {
+            name: "👮 Aplicado por",
+            value: bannedBy || "Não especificado",
+            inline: true,
+          },
+          {
+            name: "⏱️ Duração",
+            value: durationFormatted,
+            inline: true,
+          },
+          {
+            name: "📅 Data/Hora",
+            value: dateTime,
+            inline: true,
+          }
+        )
+        .setTimestamp(new Date(dateTime.replace(" ", "T")));
+
+      return embed;
+    } catch (err) {
+      logger.error("Erro ao parsear banLog:", err);
+      return null;
+    }
+  };
+
+  const formatDuration = (seconds: number): string => {
+    if (seconds === 0) return "Permanente";
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days} dia${days > 1 ? "s" : ""}`);
+    if (hours > 0) parts.push(`${hours} hora${hours > 1 ? "s" : ""}`);
+    if (minutes > 0) parts.push(`${minutes} minuto${minutes > 1 ? "s" : ""}`);
+
+    return parts.join(", ") || `${seconds} segundo${seconds > 1 ? "s" : ""}`;
   };
 
   cron.schedule("* * * * *", async () => {
