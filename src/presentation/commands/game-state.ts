@@ -4,6 +4,7 @@ import { TextChannel, AttachmentBuilder } from "discord.js";
 import { logger } from "../../utils/logger";
 import sharp from "sharp";
 import axios from "axios";
+import { env } from "../../main/config/env";
 
 let mapName: string;
 let messageId: string;
@@ -23,7 +24,7 @@ export class GameStateCommand {
   public async handle(data: any): Promise<void> {
     logger.debug("Game state updated");
     const channel = client.channels.cache.get(
-      "1151917458735767643"
+      env.gameStateChannelId!
     ) as TextChannel;
 
     try {
@@ -173,5 +174,7 @@ const getGameTime = (startTime: Date) => {
   const minutes = Math.floor(timeDifference / (1000 * 60)) % 60;
   const hours = Math.floor(timeDifference / (1000 * 60 * 60));
 
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 };
