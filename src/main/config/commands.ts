@@ -25,6 +25,8 @@ export const makeCommands = async (client: Client<boolean>) => {
   clientSocket.on("banLog", async (data: any) => {
     logger.debug("Event executed: banLog", data);
     sendBanLogMessage(env.banLogChannelId!, data);
+    // Enviar DM para o usuário banido
+    await sendBanNotificationDM(data);
   });
 
   clientSocket.on("kill", async (data: any) => {
@@ -216,6 +218,124 @@ export const makeCommands = async (client: Client<boolean>) => {
     if (minutes > 0) parts.push(`${minutes} minuto${minutes > 1 ? "s" : ""}`);
 
     return parts.join(", ") || `${seconds} segundo${seconds > 1 ? "s" : ""}`;
+  };
+
+  const sendBanNotificationDM = async (banLogString: string) => {
+    try {
+      // Extrair o GUID do banLog
+      const guidMatch = banLogString.match(/\] ([a-f0-9]{32})/);
+      if (!guidMatch) {
+        logger.debug("Não foi possível extrair o GUID do banLog");
+        return;
+      }
+
+      const guid = guidMatch[1];
+
+      // Fazer requisição para a API
+      const response = await axios.get(
+        `http://localhost:5050/api/user/${guid}`
+      );
+
+      const discordId = response.data?.discordId;
+
+      if (!discordId) {
+        logger.debug(`DiscordId não encontrado para o GUID: ${guid}`);
+        return;
+      }
+
+      // Buscar o usuário no Discord
+      const user = await client.users.fetch(discordId);
+
+      // Parsear dados do ban para criar a mensagem
+      const dateTimeMatch = banLogString.match(
+        /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/
+      );
+      const bannedByMatch = banLogString.match(/banned by (.+?) \((\d+)\)$/);
+
+      if (!dateTimeMatch || !bannedByMatch) {
+        return;
+      }
+
+      const dateTime = dateTimeMatch[1];
+      const bannedBy = bannedByMatch[1].trim();
+      const durationSeconds = parseInt(bannedByMatch[2]);
+      const durationFormatted = formatDuration(durationSeconds);
+
+      // Extrair motivo
+      const afterGuid = banLogString.substring(
+        banLogString.indexOf(guid) + guid.length + 1
+      );
+      const beforeBannedBy = afterGuid
+        .substring(0, afterGuid.indexOf("banned by"))
+        .trim();
+
+      const ipMatch = beforeBannedBy.match(
+        /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/
+      );
+
+      let reason = "";
+      if (ipMatch) {
+        const ip = ipMatch[1];
+        const ipIndex = beforeBannedBy.indexOf(ip);
+        reason = beforeBannedBy.substring(ipIndex + ip.length).trim();
+      } else {
+        const parts = beforeBannedBy.split(/\s+/);
+        if (parts.length >= 3) {
+          reason = parts.slice(3).join(" ");
+        }
+      }
+
+      // Criar embed para a DM
+      const dmEmbed = new EmbedBuilder()
+        .setColor(0xff0000) // Vermelho para ban
+        .setTitle("🔨 Você foi banido")
+        .setDescription(
+          "Você recebeu um ban no servidor. Veja os detalhes abaixo:"
+        )
+        .addFields(
+          {
+            name: "📋 Motivo",
+            value: reason || "Não especificado",
+            inline: false,
+          },
+          {
+            name: "👮 Aplicado por",
+            value: bannedBy || "Não especificado",
+            inline: true,
+          },
+          {
+            name: "⏱️ Duração",
+            value: durationFormatted,
+            inline: true,
+          },
+          {
+            name: "📅 Data/Hora",
+            value: dateTime,
+            inline: true,
+          },
+          {
+            name: "🆔 Hash",
+            value: `\`${guid}\``,
+            inline: false,
+          }
+        )
+        .setTimestamp(new Date(dateTime.replace(" ", "T")));
+
+      // Enviar DM
+      await user.send({ embeds: [dmEmbed] });
+      logger.debug(
+        `DM de ban enviada para o usuário: ${user.tag} (${discordId})`
+      );
+    } catch (err: any) {
+      // Ignorar erro se o usuário não permitir DMs ou não for encontrado
+      if (err?.code === 50007) {
+        logger.debug("Não foi possível enviar DM: usuário bloqueou DMs");
+      } else if (err?.response?.status === 404) {
+        logger.debug("Usuário não encontrado na API");
+      } else {
+        logger.error("Erro ao enviar DM de ban:", err);
+      }
+    }
   };
 
   cron.schedule("* * * * *", async () => {
