@@ -19,13 +19,15 @@ export const makeCommands = async (client: Client<boolean>) => {
 
   clientSocket.on("adminLog", async (data: any) => {
     logger.debug("Event executed: adminLog", data);
-    // Verificar se é !TIMEBANID ou !BANID
+
     if (data.includes("!TIMEBANID") || data.includes("!BANID")) {
-      await sendAdminLogBanMessage(env.banLogChannelId!, data);
-      await sendAdminLogBanNotificationDM(data);
-    } else {
-      sendMessage(env.adminLogChannelId!, data);
+      await Promise.all([
+        sendAdminLogBanMessage(env.banLogChannelId!, data),
+        sendAdminLogBanNotificationDM(data),
+      ]);
     }
+
+    sendMessage(env.adminLogChannelId!, data);
   });
 
   clientSocket.on("banLog", async (data: any) => {
