@@ -650,7 +650,7 @@ export const makeCommands = async (client: Client<boolean>) => {
 
   const handleSetNext = async (adminLogString: string) => {
     try {
-      logger.debug("Processando !SETNEXT:", adminLogString);
+      logger.debug({ adminLogString }, "Processando !SETNEXT");
 
       // Formato: [2025-11-19 01:33] !SETNEXT        performed by 'PRISM user Assistente': Donbas (Skirmish, Inf)
       const performedByMatch = adminLogString.match(/performed by '(.+?)'/);
@@ -659,9 +659,13 @@ export const makeCommands = async (client: Client<boolean>) => {
       );
 
       if (!performedByMatch || !mapInfoMatch) {
-        logger.debug("Não foi possível parsear o comando !SETNEXT");
-        logger.debug("performedByMatch:", performedByMatch);
-        logger.debug("mapInfoMatch:", mapInfoMatch);
+        logger.debug(
+          {
+            performedByMatch: performedByMatch?.[1],
+            mapInfoMatch: mapInfoMatch?.[1],
+          },
+          "Não foi possível parsear o comando !SETNEXT"
+        );
         return;
       }
 
@@ -701,10 +705,7 @@ export const makeCommands = async (client: Client<boolean>) => {
         author: author,
       };
 
-      logger.debug(
-        "Enviando notificação de !SETNEXT:",
-        JSON.stringify(payload)
-      );
+      logger.debug({ payload }, "Enviando notificação de !SETNEXT");
 
       const response = await axios.post(
         "http://localhost:5050/api/favorite-map/notify",
@@ -718,23 +719,28 @@ export const makeCommands = async (client: Client<boolean>) => {
       );
 
       logger.debug(
-        "Notificação de !SETNEXT enviada com sucesso. Status:",
-        response.status
+        { status: response.status },
+        "Notificação de !SETNEXT enviada com sucesso"
       );
     } catch (err: any) {
-      logger.error("Erro ao processar !SETNEXT:", err.message || err);
+      const errorDetails: any = {
+        message: err.message || String(err),
+      };
+
       if (err.response) {
-        logger.error("Status do servidor:", err.response.status);
-        logger.error("Dados da resposta:", JSON.stringify(err.response.data));
+        errorDetails.status = err.response.status;
+        errorDetails.data = err.response.data;
+        errorDetails.headers = err.response.headers;
       } else if (err.request) {
-        logger.error("Erro na requisição - servidor não respondeu");
-        logger.error("URL:", err.config?.url);
-      } else {
-        logger.error("Erro ao configurar requisição:", err.message);
+        errorDetails.requestError = true;
+        errorDetails.url = err.config?.url;
       }
+
       if (err.stack) {
-        logger.error("Stack trace:", err.stack);
+        errorDetails.stack = err.stack;
       }
+
+      logger.error(errorDetails, "Erro ao processar !SETNEXT");
     }
   };
 
