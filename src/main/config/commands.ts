@@ -21,10 +21,7 @@ export const makeCommands = async (client: Client<boolean>) => {
     logger.debug("Event executed: adminLog", data);
     // Verificar se é !TIMEBANID ou !BANID
     if (data.includes("!TIMEBANID") || data.includes("!BANID")) {
-      await sendAdminLogBanMessage(env.adminLogChannelId!, data);
-      // Também enviar no canal de banLog
       await sendAdminLogBanMessage(env.banLogChannelId!, data);
-      // Enviar DM para o usuário banido
       await sendAdminLogBanNotificationDM(data);
     } else {
       sendMessage(env.adminLogChannelId!, data);
@@ -220,7 +217,7 @@ export const makeCommands = async (client: Client<boolean>) => {
               playerName
                 ? `**${playerName}**${clan ? ` (${clan})` : ""}`
                 : "Não especificado"
-            }${playerMention}`,
+            }`,
             inline: true,
           },
           {
@@ -335,11 +332,6 @@ export const makeCommands = async (client: Client<boolean>) => {
             inline: true,
           },
           {
-            name: "🌐 IP",
-            value: ip ? `\`${ip}\`` : "Não especificado",
-            inline: true,
-          },
-          {
             name: "📋 Motivo",
             value: reason || "Não especificado",
             inline: false,
@@ -362,6 +354,11 @@ export const makeCommands = async (client: Client<boolean>) => {
           {
             name: "📢 Canal de Apelação",
             value: `<#1149604008730832947>`,
+            inline: false,
+          },
+          {
+            name: "💬 Discord do jogador",
+            value: playerMention || "Não especificado",
             inline: false,
           }
         )
