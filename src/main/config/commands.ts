@@ -19,7 +19,14 @@ export const makeCommands = async (client: Client<boolean>) => {
 
   clientSocket.on("adminLog", async (data: any) => {
     logger.debug("Event executed: adminLog", data);
-    sendMessage(env.adminLogChannelId!, data);
+    // Verificar se é !TIMEBANID ou !BANID
+    if (data.includes("!TIMEBANID") || data.includes("!BANID")) {
+      await sendAdminLogBanMessage(env.adminLogChannelId!, data);
+      // Enviar DM para o usuário banido
+      await sendAdminLogBanNotificationDM(data);
+    } else {
+      sendMessage(env.adminLogChannelId!, data);
+    }
   });
 
   clientSocket.on("banLog", async (data: any) => {
@@ -76,6 +83,30 @@ export const makeCommands = async (client: Client<boolean>) => {
       }
 
       const embed = await parseBanLogToEmbed(data);
+      if (embed) {
+        channel.send({ embeds: [embed] });
+      } else {
+        // Fallback para formato antigo se não conseguir parsear
+        const dataFormatter = "```" + data + "```";
+        channel.send(dataFormatter);
+      }
+    } catch (err) {
+      logger.error(err);
+    }
+  };
+
+  const sendAdminLogBanMessage = async (channelId: string, data: any) => {
+    try {
+      const channel = client.channels.cache.get(channelId);
+
+      if (!channel || channel.type != ChannelType.GuildText || data == "") {
+        console.error(
+          "Canal inválido ou não suportado para mensagens diretas."
+        );
+        return;
+      }
+
+      const embed = await parseAdminLogBanToEmbed(data);
       if (embed) {
         channel.send({ embeds: [embed] });
       } else {
@@ -230,6 +261,117 @@ export const makeCommands = async (client: Client<boolean>) => {
     }
   };
 
+  const parseAdminLogBanToEmbed = async (
+    adminLogString: string
+  ): Promise<EmbedBuilder | null> => {
+    try {
+      // Formato: [2025-11-18 21:51] !TIMEBANID      performed by 'PRISM user Assistente' on 'id 34feb10c8f184946976abd714899b6bd sucessfully banned':
+      // Ou: [2025-11-18 21:56] !BANID          performed by 'PRISM user Assistente' on 'id 34feb10c8f184946976abd714899b6bd sucessfully banned':
+
+      const dateTimeMatch = adminLogString.match(
+        /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/
+      );
+      const commandMatch = adminLogString.match(/!(\w+)/);
+      const performedByMatch = adminLogString.match(/performed by '(.+?)'/);
+      const guidMatch = adminLogString.match(/id ([a-f0-9]{32})/);
+
+      if (!dateTimeMatch || !commandMatch || !performedByMatch || !guidMatch) {
+        return null;
+      }
+
+      const dateTime = dateTimeMatch[1];
+      const command = commandMatch[1]; // TIMEBANID ou BANID
+      const performedBy = performedByMatch[1].trim();
+      const guid = guidMatch[1];
+
+      // Buscar informações do usuário na API
+      let userData: any = null;
+      let playerMention = "";
+      try {
+        const response = await axios.get(
+          `http://localhost:5050/api/user/${guid}`
+        );
+        userData = response.data;
+        const discordId = userData?.discordId;
+
+        if (discordId) {
+          playerMention = ` <@${discordId}>`;
+        }
+      } catch (err) {
+        logger.debug(`Erro ao buscar dados do usuário para o GUID: ${guid}`);
+      }
+
+      const playerName = userData?.name || "";
+      const clan = userData?.clan || "";
+      const ip = userData?.ip || "";
+      const reason = userData?.banReason || "Não especificado";
+      const durationValue = userData?.banDuration || null;
+      const durationFormatted = durationValue
+        ? formatDuration(durationValue)
+        : command === "TIMEBANID"
+        ? "Temporário"
+        : "Permanente";
+
+      const logoUrl =
+        "https://media.discordapp.net/attachments/1162222580644708372/1274439118591361104/Copia_de_Logo_Perfil_B.jpg?ex=6739912b&is=67383fab&hm=41dd71b5a12bb394bbc59b7d86564afb3de14f1c5017ce70dc6d32f1e804063d&=&format=webp&width=702&height=702";
+
+      const embed = new EmbedBuilder()
+        .setColor(0xff0000) // Vermelho para ban
+        .setTitle("🔨 Usuário Banido")
+        .setThumbnail(logoUrl)
+        .addFields(
+          {
+            name: "👤 Jogador",
+            value: playerName
+              ? `**${playerName}**${clan ? ` (${clan})` : ""}${playerMention}`
+              : `Não especificado${playerMention}`,
+            inline: true,
+          },
+          {
+            name: "🆔 Hash",
+            value: `\`${guid}\``,
+            inline: true,
+          },
+          {
+            name: "🌐 IP",
+            value: ip ? `\`${ip}\`` : "Não especificado",
+            inline: true,
+          },
+          {
+            name: "📋 Motivo",
+            value: reason || "Não especificado",
+            inline: false,
+          },
+          {
+            name: "👮 Aplicado por",
+            value: performedBy || "Não especificado",
+            inline: true,
+          },
+          {
+            name: "⏱️ Duração",
+            value: durationFormatted,
+            inline: true,
+          },
+          {
+            name: "📅 Data/Hora",
+            value: dateTime,
+            inline: true,
+          },
+          {
+            name: "📢 Canal de Apelação",
+            value: `<#1149604008730832947>`,
+            inline: false,
+          }
+        )
+        .setTimestamp(new Date(dateTime.replace(" ", "T")));
+
+      return embed;
+    } catch (err) {
+      logger.error("Erro ao parsear adminLog ban:", err);
+      return null;
+    }
+  };
+
   const formatDuration = (durationValue: string | number): string => {
     // Se for "round", retornar "1 Round"
     if (
@@ -346,6 +488,119 @@ export const makeCommands = async (client: Client<boolean>) => {
           {
             name: "👮 Aplicado por",
             value: bannedBy || "Não especificado",
+            inline: true,
+          },
+          {
+            name: "⏱️ Duração",
+            value: durationFormatted,
+            inline: true,
+          },
+          {
+            name: "📅 Data/Hora",
+            value: dateTime,
+            inline: true,
+          },
+          {
+            name: "🆔 Hash",
+            value: `\`${guid}\``,
+            inline: false,
+          },
+          {
+            name: "📢 Apelação",
+            value: `Se você acredita que foi banido injustamente, você pode apelar no canal <#1149604008730832947>`,
+            inline: false,
+          }
+        )
+        .setTimestamp(new Date(dateTime.replace(" ", "T")));
+
+      // Enviar DM
+      await user.send({ embeds: [dmEmbed] });
+      logger.debug(
+        `DM de ban enviada para o usuário: ${user.tag} (${discordId})`
+      );
+    } catch (err: any) {
+      // Ignorar erro se o usuário não permitir DMs ou não for encontrado
+      if (err?.code === 50007) {
+        logger.debug("Não foi possível enviar DM: usuário bloqueou DMs");
+      } else if (err?.response?.status === 404) {
+        logger.debug("Usuário não encontrado na API");
+      } else {
+        logger.error("Erro ao enviar DM de ban:", err);
+      }
+    }
+  };
+
+  const sendAdminLogBanNotificationDM = async (adminLogString: string) => {
+    try {
+      // Extrair o GUID do adminLog
+      const guidMatch = adminLogString.match(/id ([a-f0-9]{32})/);
+      if (!guidMatch) {
+        logger.debug("Não foi possível extrair o GUID do adminLog");
+        return;
+      }
+
+      const guid = guidMatch[1];
+
+      // Fazer requisição para a API
+      const response = await axios.get(
+        `http://localhost:5050/api/user/${guid}`
+      );
+
+      const discordId = response.data?.discordId;
+
+      if (!discordId) {
+        logger.debug(`DiscordId não encontrado para o GUID: ${guid}`);
+        return;
+      }
+
+      // Buscar o usuário no Discord
+      const user = await client.users.fetch(discordId);
+
+      // Parsear dados do ban para criar a mensagem
+      const dateTimeMatch = adminLogString.match(
+        /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]/
+      );
+      const commandMatch = adminLogString.match(/!(\w+)/);
+      const performedByMatch = adminLogString.match(/performed by '(.+?)'/);
+
+      if (!dateTimeMatch || !commandMatch || !performedByMatch) {
+        return;
+      }
+
+      const dateTime = dateTimeMatch[1];
+      const command = commandMatch[1];
+      const performedBy = performedByMatch[1].trim();
+
+      // Buscar informações adicionais da API
+      const userData = response.data;
+      const reason = userData?.banReason || "Não especificado";
+      const durationValue = userData?.banDuration || null;
+      const durationFormatted = durationValue
+        ? formatDuration(durationValue)
+        : command === "TIMEBANID"
+        ? "Temporário"
+        : "Permanente";
+
+      const logoUrl =
+        "https://media.discordapp.net/attachments/1162222580644708372/1274439118591361104/Copia_de_Logo_Perfil_B.jpg?ex=6739912b&is=67383fab&hm=41dd71b5a12bb394bbc59b7d86564afb3de14f1c5017ce70dc6d32f1e804063d&=&format=webp&width=702&height=702";
+
+      // Criar embed para a DM
+      const dmEmbed = new EmbedBuilder()
+        .setColor(0xff0000) // Vermelho para ban
+        .setTitle("🔨 Você foi banido")
+        .setThumbnail(logoUrl)
+        .setDescription(
+          "Você recebeu um ban no servidor. Veja os detalhes abaixo:"
+        )
+        .addFields(
+          {
+            name: "📋 Motivo",
+            value: reason || "Não especificado",
+            inline: false,
+          },
+          {
+            name: "👮 Aplicado por",
+            value: performedBy || "Não especificado",
             inline: true,
           },
           {
