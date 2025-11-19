@@ -708,7 +708,7 @@ export const makeCommands = async (client: Client<boolean>) => {
       logger.debug({ payload }, "Enviando notificação de !SETNEXT");
 
       const response = await axios.post(
-        "http://localhost:5050/api/favorite-map/notify",
+        "http://162.120.71.123:2020/api/favorite-map/notify",
         payload,
         {
           headers: {
