@@ -22,6 +22,8 @@ export const makeCommands = async (client: Client<boolean>) => {
     // Verificar se é !TIMEBANID ou !BANID
     if (data.includes("!TIMEBANID") || data.includes("!BANID")) {
       await sendAdminLogBanMessage(env.adminLogChannelId!, data);
+      // Também enviar no canal de banLog
+      await sendAdminLogBanMessage(env.banLogChannelId!, data);
       // Enviar DM para o usuário banido
       await sendAdminLogBanNotificationDM(data);
     } else {
