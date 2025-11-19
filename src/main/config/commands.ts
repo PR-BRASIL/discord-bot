@@ -655,7 +655,7 @@ export const makeCommands = async (client: Client<boolean>) => {
       // Formato: [2025-11-19 01:33] !SETNEXT        performed by 'PRISM user Assistente': Donbas (Skirmish, Inf)
       const performedByMatch = adminLogString.match(/performed by '(.+?)'/);
       const mapInfoMatch = adminLogString.match(
-        /':\s*(.+?)\s*\((.+?),\s*(.+?)\)/
+        /':\s*(.+?)\s*\((.+?)(?:,\s*(.+?))?\)/
       );
 
       if (!performedByMatch || !mapInfoMatch) {
@@ -678,9 +678,8 @@ export const makeCommands = async (client: Client<boolean>) => {
 
       const mapName = mapInfoMatch[1].trim();
       const mode = mapInfoMatch[2].trim();
-      const layout = mapInfoMatch[3].trim();
 
-      // Mapear os modos e layouts para os valores esperados
+      // Mapear os modos para os valores esperados
       const modeMap: { [key: string]: string } = {
         Skirmish: "Skirmish",
         AAS: "AAS",
@@ -688,20 +687,11 @@ export const makeCommands = async (client: Client<boolean>) => {
         Gungame: "Gungame",
       };
 
-      const layoutMap: { [key: string]: string } = {
-        Inf: "Inf",
-        Alt: "Alt",
-        Std: "Std",
-        Lrg: "Lrg",
-      };
-
       const mappedMode = modeMap[mode] || mode;
-      const mappedLayout = layoutMap[layout] || layout;
 
       const payload = {
         name: mapName,
         mode: mappedMode,
-        layout: mappedLayout,
         author: author,
       };
 
