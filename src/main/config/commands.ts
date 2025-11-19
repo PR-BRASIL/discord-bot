@@ -27,6 +27,10 @@ export const makeCommands = async (client: Client<boolean>) => {
       ]);
     }
 
+    if (data.includes("!SETNEXT")) {
+      await handleSetNext(data);
+    }
+
     sendMessage(env.adminLogChannelId!, data);
   });
 
@@ -640,6 +644,71 @@ export const makeCommands = async (client: Client<boolean>) => {
         logger.debug("Usuário não encontrado na API");
       } else {
         logger.error("Erro ao enviar DM de ban:", err);
+      }
+    }
+  };
+
+  const handleSetNext = async (adminLogString: string) => {
+    try {
+      // Formato: [2025-11-19 01:33] !SETNEXT        performed by 'PRISM user Assistente': Donbas (Skirmish, Inf)
+      const performedByMatch = adminLogString.match(/performed by '(.+?)'/);
+      const mapInfoMatch = adminLogString.match(
+        /':\s*(.+?)\s*\((.+?),\s*(.+?)\)/
+      );
+
+      if (!performedByMatch || !mapInfoMatch) {
+        logger.debug("Não foi possível parsear o comando !SETNEXT");
+        return;
+      }
+
+      const performedBy = performedByMatch[1].trim();
+      // Extrair apenas o nome do usuário (remover "PRISM user" se presente)
+      let author = performedBy;
+      if (performedBy.includes("PRISM user")) {
+        author = performedBy.replace("PRISM user", "").trim();
+      }
+
+      const mapName = mapInfoMatch[1].trim();
+      const mode = mapInfoMatch[2].trim();
+      const layout = mapInfoMatch[3].trim();
+
+      // Mapear os modos e layouts para os valores esperados
+      const modeMap: { [key: string]: string } = {
+        Skirmish: "Skirmish",
+        AAS: "AAS",
+        Insurgency: "Insurgency",
+        Gungame: "Gungame",
+      };
+
+      const layoutMap: { [key: string]: string } = {
+        Inf: "Inf",
+        Alt: "Alt",
+        Std: "Std",
+        Lrg: "Lrg",
+      };
+
+      const mappedMode = modeMap[mode] || mode;
+      const mappedLayout = layoutMap[layout] || layout;
+
+      const payload = {
+        name: mapName,
+        mode: mappedMode,
+        layout: mappedLayout,
+        author: author,
+      };
+
+      logger.debug("Enviando notificação de !SETNEXT:", payload);
+
+      await axios.post(
+        "http://localhost:5050/api/favorite-map/notify",
+        payload
+      );
+
+      logger.debug("Notificação de !SETNEXT enviada com sucesso");
+    } catch (err: any) {
+      logger.error("Erro ao processar !SETNEXT:", err);
+      if (err.response) {
+        logger.error("Resposta do servidor:", err.response.data);
       }
     }
   };
