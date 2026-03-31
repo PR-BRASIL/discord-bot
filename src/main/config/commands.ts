@@ -64,10 +64,6 @@ export const makeCommands = async (client: Client<boolean>) => {
     try {
       const channel = client.channels.cache.get(channelId);
 
-      console.log("Channel:", channel);
-      console.log("Channel type:", channel?.type, channel.type != ChannelType.GuildText);
-      console.log("Data:", data);
-
       if (!channel || channel.type != ChannelType.GuildText || data == "") {
         console.error(
           "Canal inválido ou não suportado para mensagens diretas."
@@ -78,6 +74,7 @@ export const makeCommands = async (client: Client<boolean>) => {
       const dataFormatter = "```" + data + "```";
       channel.send(dataFormatter);
       console.log("Message sent");
+      console.log("Message content:", dataFormatter);
     } catch (err) {
       logger.error(err);
     }
@@ -86,6 +83,11 @@ export const makeCommands = async (client: Client<boolean>) => {
   const sendBanLogMessage = async (channelId: string, data: any) => {
     try {
       const channel = client.channels.cache.get(channelId);
+
+
+      console.log("Channel:", channel);
+      console.log("Channel type:", channel?.type, channel.type != ChannelType.GuildText);
+      console.log("Data:", data);
 
       if (!channel || channel.type != ChannelType.GuildText || data == "") {
         console.error(
