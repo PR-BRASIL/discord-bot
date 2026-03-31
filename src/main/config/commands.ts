@@ -117,13 +117,7 @@ export const makeCommands = async (client: Client<boolean>) => {
     try {
       const channel = client.channels.cache.get(channelId);
 
-      console.log(" RODOOOUUU ADMIN LOG BAN MESSAGE")
-
-      console.log("Channel:", channel);
-      console.log("Channel type:", channel?.type, channel.type != ChannelType.GuildText);
-      console.log("Data:", data);
-
-      if (!channel || channel.type != ChannelType.GuildText || data == "") {
+      if (!channel || channel.type != ChannelType.GuildText && channel.type != ChannelType.GuildAnnouncement || data == "") {
         console.error(
           "Canal inválido ou não suportado para mensagens diretas."
         );
