@@ -77,6 +77,7 @@ export const makeCommands = async (client: Client<boolean>) => {
 
       const dataFormatter = "```" + data + "```";
       channel.send(dataFormatter);
+      console.log("Message sent");
     } catch (err) {
       logger.error(err);
     }
