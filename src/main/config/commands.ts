@@ -84,6 +84,8 @@ export const makeCommands = async (client: Client<boolean>) => {
     try {
       const channel = client.channels.cache.get(channelId);
 
+      console.log(" RODOOOUUU BAN LOG MESSAGE")
+
 
       console.log("Channel:", channel);
       console.log("Channel type:", channel?.type, channel.type != ChannelType.GuildText);
@@ -420,6 +422,8 @@ export const makeCommands = async (client: Client<boolean>) => {
 
   const sendBanNotificationDM = async (banLogString: string) => {
     try {
+      console.log(" RODOOOUUU BAN NOTIFICATION DM")
+
       // Extrair o GUID do banLog
       const guidMatch = banLogString.match(/\] ([a-f0-9]{32})/);
       if (!guidMatch) {
