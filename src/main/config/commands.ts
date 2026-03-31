@@ -36,9 +36,11 @@ export const makeCommands = async (client: Client<boolean>) => {
 
   clientSocket.on("banLog", async (data: any) => {
     logger.debug("Event executed: banLog", data);
-    sendBanLogMessage(env.banLogChannelId!, data);
-    // Enviar DM para o usuário banido
-    await sendBanNotificationDM(data);
+
+    await Promise.all([
+      sendBanLogMessage(env.banLogChannelId!, data),
+      sendBanNotificationDM(data),
+    ]);
   });
 
   clientSocket.on("kill", async (data: any) => {
