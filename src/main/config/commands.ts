@@ -97,6 +97,8 @@ export const makeCommands = async (client: Client<boolean>) => {
         const dataFormatter = "```" + data + "```";
         channel.send(dataFormatter);
       }
+
+      console.log("Ban log message sent");
     } catch (err) {
       logger.error(err);
     }
